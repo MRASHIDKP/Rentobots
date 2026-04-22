@@ -1,0 +1,1629 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>RENTOBOT — Humanoid Robot Rental</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Space+Mono:ital,wght@0,400;0,700;1,400&family=Rajdhani:wght@300;400;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --black: #030508;
+    --deep: #080d14;
+    --panel: #0d1520;
+    --border: #1a2a3a;
+    --blue-dim: #0a3a6e;
+    --blue: #0d6efd;
+    --blue-bright: #2196f3;
+    --cyan: #00d4ff;
+    --cyan-glow: rgba(0, 212, 255, 0.15);
+    --white: #e8f4ff;
+    --muted: #5a7a99;
+    --accent: #00d4ff;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+
+  body {
+    background: var(--black);
+    color: var(--white);
+    font-family: 'Rajdhani', sans-serif;
+    overflow-x: hidden;
+    cursor: none;
+  }
+
+  /* Custom cursor — desktop only */
+  .cursor, .cursor-ring {
+    display: none;
+  }
+  @media (hover: hover) and (pointer: fine) {
+    body { cursor: none; }
+    .cursor {
+      display: block;
+      width: 12px; height: 12px;
+      background: var(--cyan);
+      border-radius: 50%;
+      position: fixed;
+      pointer-events: none;
+      z-index: 9999;
+      transform: translate(-50%, -50%);
+      transition: transform 0.1s, width 0.2s, height 0.2s, opacity 0.2s;
+      box-shadow: 0 0 12px var(--cyan), 0 0 30px rgba(0,212,255,0.4);
+    }
+    .cursor-ring {
+      display: block;
+      width: 36px; height: 36px;
+      border: 1px solid rgba(0,212,255,0.5);
+      border-radius: 50%;
+      position: fixed;
+      pointer-events: none;
+      z-index: 9998;
+      transform: translate(-50%, -50%);
+      transition: all 0.15s ease;
+    }
+  }
+
+  /* ── NAV ── */
+  nav {
+    position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 18px 40px;
+    background: linear-gradient(to bottom, rgba(3,5,8,0.98) 0%, transparent 100%);
+    border-bottom: 1px solid rgba(0,212,255,0.08);
+    gap: 16px;
+  }
+  .nav-logo {
+    font-family: 'Bebas Neue', cursive;
+    font-size: 26px;
+    letter-spacing: 6px;
+    color: var(--white);
+    flex-shrink: 0;
+  }
+  .nav-logo span { color: var(--cyan); }
+
+  .nav-links {
+    display: flex; gap: 32px; list-style: none;
+  }
+  .nav-links a {
+    font-family: 'Space Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 3px;
+    color: var(--muted);
+    text-decoration: none;
+    text-transform: uppercase;
+    transition: color 0.2s;
+  }
+  .nav-links a:hover { color: var(--cyan); }
+
+  .nav-cta {
+    font-family: 'Space Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 2px;
+    padding: 9px 20px;
+    border: 1px solid var(--cyan);
+    color: var(--cyan);
+    background: transparent;
+    cursor: pointer;
+    text-transform: uppercase;
+    transition: all 0.2s;
+    flex-shrink: 0;
+  }
+  .nav-cta:hover { background: var(--cyan); color: var(--black); }
+
+  /* Hamburger */
+  .hamburger {
+    display: none;
+    flex-direction: column;
+    gap: 5px;
+    cursor: pointer;
+    padding: 4px;
+    background: none;
+    border: none;
+    z-index: 200;
+  }
+  .hamburger span {
+    display: block;
+    width: 24px; height: 2px;
+    background: var(--cyan);
+    transition: all 0.3s;
+    transform-origin: center;
+  }
+  .hamburger.open span:nth-child(1) { transform: translateY(7px) rotate(45deg); }
+  .hamburger.open span:nth-child(2) { opacity: 0; }
+  .hamburger.open span:nth-child(3) { transform: translateY(-7px) rotate(-45deg); }
+
+  .mobile-menu {
+    display: none;
+    position: fixed; inset: 0;
+    background: rgba(3,5,8,0.97);
+    z-index: 150;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 36px;
+  }
+  .mobile-menu.open { display: flex; }
+  .mobile-menu a {
+    font-family: 'Bebas Neue', cursive;
+    font-size: 40px;
+    letter-spacing: 4px;
+    color: var(--white);
+    text-decoration: none;
+    transition: color 0.2s;
+  }
+  .mobile-menu a:hover { color: var(--cyan); }
+  .mobile-menu .mobile-cta {
+    font-family: 'Space Mono', monospace;
+    font-size: 12px;
+    letter-spacing: 2px;
+    padding: 14px 36px;
+    border: 1px solid var(--cyan);
+    color: var(--cyan);
+    background: transparent;
+    cursor: pointer;
+    text-transform: uppercase;
+    margin-top: 12px;
+  }
+
+  /* ── HERO ── */
+  .hero {
+    min-height: 100vh;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    position: relative;
+    overflow: hidden;
+  }
+  .hero::before {
+    content: '';
+    position: absolute; inset: 0;
+    background-image:
+      linear-gradient(rgba(0,212,255,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0,212,255,0.03) 1px, transparent 1px);
+    background-size: 60px 60px;
+    animation: gridPulse 8s ease-in-out infinite;
+    pointer-events: none;
+  }
+  @keyframes gridPulse {
+    0%, 100% { opacity: 0.5; }
+    50% { opacity: 1; }
+  }
+  .hero-left {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding: 120px 50px 80px;
+    position: relative; z-index: 2;
+  }
+  .hero-tag {
+    font-family: 'Space Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 4px;
+    color: var(--cyan);
+    text-transform: uppercase;
+    margin-bottom: 24px;
+    display: flex; align-items: center; gap: 12px;
+  }
+  .hero-tag::before {
+    content: '';
+    display: block; width: 40px; height: 1px;
+    background: var(--cyan);
+  }
+  .hero-title {
+    font-family: 'Bebas Neue', cursive;
+    font-size: clamp(64px, 7vw, 110px);
+    line-height: 0.9;
+    letter-spacing: 2px;
+    margin-bottom: 32px;
+  }
+  .hero-title .line-accent { color: var(--cyan); }
+  .hero-title .line-dim { color: var(--muted); font-size: 0.6em; }
+
+  .hero-desc {
+    font-size: 15px;
+    line-height: 1.7;
+    color: rgba(232,244,255,0.6);
+    max-width: 400px;
+    margin-bottom: 40px;
+    font-weight: 300;
+  }
+  .hero-actions { display: flex; gap: 14px; align-items: center; flex-wrap: wrap; }
+
+  .btn-primary {
+    font-family: 'Space Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 2px;
+    padding: 14px 32px;
+    background: var(--cyan);
+    color: var(--black);
+    border: none;
+    cursor: pointer;
+    text-transform: uppercase;
+    font-weight: 700;
+    transition: all 0.2s;
+    position: relative;
+    overflow: hidden;
+  }
+  .btn-primary::after {
+    content: '';
+    position: absolute; inset: 0;
+    background: white;
+    transform: translateX(-100%);
+    transition: transform 0.3s ease;
+    opacity: 0.2;
+  }
+  .btn-primary:hover::after { transform: translateX(0); }
+
+  .btn-ghost {
+    font-family: 'Space Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 2px;
+    padding: 14px 32px;
+    background: transparent;
+    color: var(--white);
+    border: 1px solid var(--border);
+    cursor: pointer;
+    text-transform: uppercase;
+    transition: all 0.2s;
+  }
+  .btn-ghost:hover { border-color: var(--cyan); color: var(--cyan); }
+
+  .hero-stats {
+    display: flex; gap: 32px; flex-wrap: wrap;
+    margin-top: 56px;
+    padding-top: 36px;
+    border-top: 1px solid var(--border);
+  }
+  .stat-val {
+    font-family: 'Bebas Neue', cursive;
+    font-size: 34px;
+    color: var(--cyan);
+    letter-spacing: 2px;
+    display: block;
+  }
+  .stat-label {
+    font-family: 'Space Mono', monospace;
+    font-size: 9px;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 2px;
+  }
+
+  /* Robot stage */
+  .hero-right {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+  }
+  .robot-stage {
+    position: relative;
+    width: 100%; height: 100%;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .robot-glow {
+    position: absolute;
+    width: 420px; height: 420px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(0,212,255,0.12) 0%, transparent 70%);
+    animation: glowPulse 3s ease-in-out infinite;
+  }
+  @keyframes glowPulse {
+    0%, 100% { transform: scale(1); opacity: 0.8; }
+    50% { transform: scale(1.1); opacity: 1; }
+  }
+  .robot-ring {
+    position: absolute;
+    border-radius: 50%;
+    border: 1px solid rgba(0,212,255,0.15);
+  }
+  .robot-ring-1 { width: 300px; height: 300px; animation: ringRotate 12s linear infinite; }
+  .robot-ring-2 { width: 420px; height: 420px; animation: ringRotate 20s linear infinite reverse; border-style: dashed; }
+  .robot-ring-3 { width: 520px; height: 520px; animation: ringRotate 30s linear infinite; border-color: rgba(0,212,255,0.06); }
+  @keyframes ringRotate { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+
+  .robot-img {
+    position: relative; z-index: 2;
+    height: 72vh; max-height: 660px;
+    object-fit: contain;
+    filter: drop-shadow(0 0 40px rgba(0,212,255,0.25)) drop-shadow(0 0 80px rgba(0,100,200,0.15));
+    animation: robotFloat 5s ease-in-out infinite;
+  }
+  @keyframes robotFloat {
+    0%, 100% { transform: translateY(0px); }
+    50% { transform: translateY(-12px); }
+  }
+  .scan-line {
+    position: absolute; left: 0; right: 0; height: 2px;
+    background: linear-gradient(90deg, transparent, rgba(0,212,255,0.4), transparent);
+    animation: scanMove 4s linear infinite;
+    pointer-events: none; z-index: 5;
+  }
+  @keyframes scanMove {
+    0% { top: 10%; opacity: 0; }
+    5% { opacity: 1; }
+    95% { opacity: 1; }
+    100% { top: 90%; opacity: 0; }
+  }
+  .hud-corner {
+    position: absolute; width: 22px; height: 22px;
+    border-color: var(--cyan); border-style: solid; opacity: 0.5;
+  }
+  .hud-tl { top: 15%; left: 8%; border-width: 1px 0 0 1px; }
+  .hud-tr { top: 15%; right: 8%; border-width: 1px 1px 0 0; }
+  .hud-bl { bottom: 15%; left: 8%; border-width: 0 0 1px 1px; }
+  .hud-br { bottom: 15%; right: 8%; border-width: 0 1px 1px 0; }
+
+  /* ── SECTIONS ── */
+  .section {
+    padding: 80px 60px;
+    position: relative;
+  }
+  .section-header {
+    display: flex; align-items: flex-end; justify-content: space-between;
+    margin-bottom: 52px;
+    flex-wrap: wrap; gap: 16px;
+  }
+  .section-eyebrow {
+    font-family: 'Space Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 4px;
+    color: var(--cyan);
+    text-transform: uppercase;
+    margin-bottom: 12px;
+    display: flex; align-items: center; gap: 10px;
+  }
+  .section-eyebrow::before {
+    content: '';
+    display: inline-block; width: 3px; height: 14px;
+    background: var(--cyan);
+  }
+  .section-title {
+    font-family: 'Bebas Neue', cursive;
+    font-size: clamp(36px, 4vw, 64px);
+    letter-spacing: 2px; line-height: 1;
+  }
+  .view-all {
+    font-family: 'Space Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 2px;
+    color: var(--muted);
+    text-decoration: none;
+    text-transform: uppercase;
+    display: flex; align-items: center; gap: 8px;
+    transition: color 0.2s;
+    padding-bottom: 4px;
+    border-bottom: 1px solid var(--border);
+  }
+  .view-all:hover { color: var(--cyan); border-color: var(--cyan); }
+
+  /* Models grid */
+  .models-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 2px;
+  }
+  .model-card {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    position: relative; overflow: hidden;
+    transition: transform 0.3s, border-color 0.3s;
+    cursor: pointer;
+  }
+  .model-card:hover { border-color: rgba(0,212,255,0.4); transform: translateY(-4px); }
+  .model-card:hover .model-overlay { opacity: 1; }
+  .model-overlay {
+    position: absolute; inset: 0;
+    background: linear-gradient(to top, rgba(0,212,255,0.06) 0%, transparent 60%);
+    opacity: 0; transition: opacity 0.3s; pointer-events: none;
+  }
+  .model-badge {
+    position: absolute; top: 16px; left: 16px;
+    font-family: 'Space Mono', monospace;
+    font-size: 9px; letter-spacing: 3px;
+    padding: 4px 10px;
+    background: var(--cyan); color: var(--black);
+    text-transform: uppercase; font-weight: 700; z-index: 2;
+  }
+  .model-badge.pro { background: #ff6b2b; }
+  .model-badge.elite { background: #9b59b6; }
+
+  .model-visual {
+    height: 240px;
+    background: linear-gradient(135deg, var(--deep) 0%, #0a1824 100%);
+    display: flex; align-items: center; justify-content: center;
+    position: relative; overflow: hidden;
+  }
+  .model-visual::before {
+    content: '';
+    position: absolute; inset: 0;
+    background: radial-gradient(circle at 50% 80%, rgba(0,212,255,0.08) 0%, transparent 60%);
+  }
+  .model-icon {
+    font-size: 72px;
+    filter: grayscale(0.3); position: relative; z-index: 1;
+    transition: transform 0.3s;
+  }
+  .model-card:hover .model-icon { transform: scale(1.05); }
+
+  .model-info { padding: 24px; }
+  .model-series {
+    font-family: 'Space Mono', monospace;
+    font-size: 9px; color: var(--cyan);
+    letter-spacing: 3px; text-transform: uppercase; margin-bottom: 6px;
+  }
+  .model-name {
+    font-family: 'Bebas Neue', cursive;
+    font-size: 24px; letter-spacing: 2px; margin-bottom: 8px;
+  }
+  .model-desc {
+    font-size: 12px; color: var(--muted);
+    line-height: 1.6; margin-bottom: 16px; font-weight: 300;
+  }
+  .model-specs {
+    display: grid; grid-template-columns: 1fr 1fr;
+    gap: 10px; margin-bottom: 20px;
+    padding: 14px; background: rgba(0,0,0,0.3);
+    border: 1px solid var(--border);
+  }
+  .spec-label {
+    font-family: 'Space Mono', monospace;
+    font-size: 8px; color: var(--muted);
+    letter-spacing: 2px; text-transform: uppercase; margin-bottom: 2px;
+  }
+  .spec-val { font-size: 13px; font-weight: 600; color: var(--white); }
+  .model-pricing {
+    display: flex; align-items: center; justify-content: space-between;
+    padding-top: 16px; border-top: 1px solid var(--border);
+    flex-wrap: wrap; gap: 10px;
+  }
+  .price-from {
+    font-family: 'Space Mono', monospace;
+    font-size: 8px; color: var(--muted);
+    text-transform: uppercase; letter-spacing: 2px;
+    display: block; margin-bottom: 2px;
+  }
+  .price-val {
+    font-family: 'Bebas Neue', cursive;
+    font-size: 28px; color: var(--cyan); letter-spacing: 1px;
+  }
+  .price-period {
+    font-family: 'Space Mono', monospace;
+    font-size: 9px; color: var(--muted);
+  }
+  .btn-rent {
+    font-family: 'Space Mono', monospace;
+    font-size: 9px; letter-spacing: 2px;
+    padding: 9px 18px;
+    border: 1px solid var(--cyan); color: var(--cyan);
+    background: transparent; cursor: pointer;
+    text-transform: uppercase; transition: all 0.2s;
+  }
+  .btn-rent:hover { background: var(--cyan); color: var(--black); }
+
+  /* Use cases */
+  .usecases-bg {
+    background: var(--deep);
+    border-top: 1px solid var(--border);
+    border-bottom: 1px solid var(--border);
+  }
+  .usecases-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 0;
+  }
+  .usecase-card {
+    padding: 40px 28px;
+    border-right: 1px solid var(--border);
+    position: relative; overflow: hidden;
+    transition: background 0.3s; cursor: pointer;
+  }
+  .usecase-card:last-child { border-right: none; }
+  .usecase-card:hover { background: rgba(0,212,255,0.03); }
+  .usecase-card::after {
+    content: '';
+    position: absolute; bottom: 0; left: 0; right: 0; height: 2px;
+    background: var(--cyan);
+    transform: scaleX(0); transform-origin: left;
+    transition: transform 0.3s;
+  }
+  .usecase-card:hover::after { transform: scaleX(1); }
+  .usecase-num {
+    font-family: 'Bebas Neue', cursive;
+    font-size: 50px; color: rgba(0,212,255,0.08); line-height: 1; margin-bottom: 12px;
+  }
+  .usecase-icon { font-size: 26px; margin-bottom: 14px; display: block; }
+  .usecase-title {
+    font-family: 'Bebas Neue', cursive;
+    font-size: 20px; letter-spacing: 1px; margin-bottom: 8px;
+  }
+  .usecase-desc { font-size: 12px; color: var(--muted); line-height: 1.6; font-weight: 300; }
+
+  /* Process */
+  .process-steps {
+    display: grid; grid-template-columns: repeat(4, 1fr);
+    gap: 0; position: relative;
+  }
+  .process-steps::before {
+    content: '';
+    position: absolute; top: 36px; left: 12.5%; right: 12.5%; height: 1px;
+    background: linear-gradient(90deg, transparent, var(--cyan) 20%, var(--cyan) 80%, transparent);
+    opacity: 0.3;
+  }
+  .process-step { text-align: center; padding: 0 16px; position: relative; }
+  .step-num {
+    width: 70px; height: 70px;
+    border: 1px solid rgba(0,212,255,0.3); border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    margin: 0 auto 24px;
+    font-family: 'Bebas Neue', cursive; font-size: 26px; color: var(--cyan);
+    position: relative; background: var(--black);
+  }
+  .step-num::after {
+    content: ''; position: absolute; inset: -4px; border-radius: 50%;
+    border: 1px solid rgba(0,212,255,0.1);
+  }
+  .step-title {
+    font-family: 'Bebas Neue', cursive;
+    font-size: 18px; letter-spacing: 1px; margin-bottom: 8px;
+  }
+  .step-desc { font-size: 12px; color: var(--muted); line-height: 1.6; font-weight: 300; }
+
+  /* Pricing banner */
+  .pricing-banner {
+    background: linear-gradient(135deg, var(--blue-dim) 0%, #05152a 100%);
+    border: 1px solid rgba(0,212,255,0.15);
+    padding: 70px 60px;
+    display: grid;
+    grid-template-columns: 1fr auto;
+    align-items: center; gap: 40px;
+    position: relative; overflow: hidden;
+  }
+  .pricing-banner::before {
+    content: '';
+    position: absolute; right: -100px; top: -100px;
+    width: 400px; height: 400px; border-radius: 50%;
+    background: radial-gradient(circle, rgba(0,212,255,0.06) 0%, transparent 60%);
+  }
+  .banner-eyebrow {
+    font-family: 'Space Mono', monospace;
+    font-size: 10px; letter-spacing: 4px; color: var(--cyan);
+    text-transform: uppercase; margin-bottom: 14px;
+  }
+  .banner-title {
+    font-family: 'Bebas Neue', cursive;
+    font-size: clamp(36px, 4vw, 56px);
+    letter-spacing: 2px; line-height: 1; margin-bottom: 14px;
+  }
+  .banner-desc {
+    font-size: 14px; color: rgba(232,244,255,0.6);
+    max-width: 480px; line-height: 1.6; font-weight: 300;
+  }
+  .banner-actions { display: flex; gap: 14px; flex-direction: column; align-items: flex-end; }
+  .banner-price {
+    font-family: 'Bebas Neue', cursive;
+    font-size: 18px; color: var(--muted); letter-spacing: 2px; text-align: right;
+  }
+  .banner-price strong { color: var(--cyan); font-size: 48px; display: block; }
+
+  /* Ticker */
+  .ticker {
+    background: var(--cyan); color: var(--black);
+    padding: 10px 0; overflow: hidden; white-space: nowrap;
+    font-family: 'Space Mono', monospace;
+    font-size: 11px; letter-spacing: 2px; font-weight: 700;
+  }
+  .ticker-inner {
+    display: inline-block;
+    animation: tickerScroll 30s linear infinite;
+  }
+  @keyframes tickerScroll { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+  .ticker-sep { margin: 0 28px; opacity: 0.4; }
+
+  /* Footer */
+  footer {
+    background: var(--deep);
+    border-top: 1px solid var(--border);
+    padding: 56px 60px;
+  }
+  .footer-grid {
+    display: grid;
+    grid-template-columns: 2fr 1fr 1fr 1fr;
+    gap: 48px; margin-bottom: 40px;
+  }
+  .footer-logo {
+    font-family: 'Bebas Neue', cursive;
+    font-size: 30px; letter-spacing: 6px; margin-bottom: 14px;
+  }
+  .footer-logo span { color: var(--cyan); }
+  .footer-tagline {
+    font-size: 12px; color: var(--muted); line-height: 1.6;
+    font-weight: 300; max-width: 240px;
+  }
+  .footer-col-title {
+    font-family: 'Space Mono', monospace;
+    font-size: 10px; letter-spacing: 3px; color: var(--cyan);
+    text-transform: uppercase; margin-bottom: 18px;
+  }
+  .footer-links { list-style: none; display: flex; flex-direction: column; gap: 9px; }
+  .footer-links a {
+    font-size: 12px; color: var(--muted); text-decoration: none;
+    transition: color 0.2s; font-weight: 300;
+  }
+  .footer-links a:hover { color: var(--white); }
+  .footer-bottom {
+    border-top: 1px solid var(--border); padding-top: 24px;
+    display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px;
+  }
+  .footer-copy {
+    font-family: 'Space Mono', monospace;
+    font-size: 9px; color: var(--muted); letter-spacing: 1px;
+  }
+  .status-indicator {
+    display: flex; align-items: center; gap: 8px;
+    font-family: 'Space Mono', monospace;
+    font-size: 9px; color: #00ff88; letter-spacing: 2px;
+  }
+  .status-dot {
+    width: 6px; height: 6px; background: #00ff88; border-radius: 50%;
+    animation: blink 2s ease-in-out infinite;
+    box-shadow: 0 0 8px #00ff88;
+  }
+  @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
+
+  /* Scroll reveal */
+  .reveal { opacity: 0; transform: translateY(28px); transition: opacity 0.6s ease, transform 0.6s ease; }
+  .reveal.visible { opacity: 1; transform: translateY(0); }
+
+  /* ────────────────────────────────────────────
+     MODAL — Rental / Contact Form
+  ──────────────────────────────────────────── */
+  .modal-overlay {
+    display: none;
+    position: fixed; inset: 0; z-index: 500;
+    background: rgba(3,5,8,0.88);
+    backdrop-filter: blur(6px);
+    align-items: center; justify-content: center;
+    padding: 20px;
+  }
+  .modal-overlay.open { display: flex; }
+
+  .modal {
+    background: var(--panel);
+    border: 1px solid rgba(0,212,255,0.25);
+    width: 100%; max-width: 560px;
+    max-height: 90vh;
+    overflow-y: auto;
+    position: relative;
+    animation: modalIn 0.3s ease;
+  }
+  @keyframes modalIn {
+    from { opacity: 0; transform: translateY(24px) scale(0.97); }
+    to   { opacity: 1; transform: translateY(0) scale(1); }
+  }
+  .modal-header {
+    padding: 28px 32px 20px;
+    border-bottom: 1px solid var(--border);
+    display: flex; align-items: flex-start; justify-content: space-between; gap: 12px;
+  }
+  .modal-eyebrow {
+    font-family: 'Space Mono', monospace;
+    font-size: 9px; letter-spacing: 3px; color: var(--cyan);
+    text-transform: uppercase; margin-bottom: 6px;
+  }
+  .modal-title {
+    font-family: 'Bebas Neue', cursive;
+    font-size: 32px; letter-spacing: 2px; line-height: 1;
+  }
+  .modal-close {
+    background: none; border: 1px solid var(--border);
+    color: var(--muted); cursor: pointer;
+    width: 32px; height: 32px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 16px; flex-shrink: 0;
+    transition: all 0.2s;
+  }
+  .modal-close:hover { border-color: var(--cyan); color: var(--cyan); }
+
+  .modal-body { padding: 28px 32px; }
+
+  /* Selected model pill */
+  .selected-model {
+    display: flex; align-items: center; gap: 12px;
+    padding: 14px 16px;
+    background: rgba(0,212,255,0.06);
+    border: 1px solid rgba(0,212,255,0.2);
+    margin-bottom: 28px;
+  }
+  .selected-model-icon { font-size: 24px; }
+  .selected-model-name {
+    font-family: 'Bebas Neue', cursive;
+    font-size: 18px; letter-spacing: 1px;
+  }
+  .selected-model-price {
+    font-family: 'Space Mono', monospace;
+    font-size: 10px; color: var(--cyan);
+  }
+  .selected-model-change {
+    margin-left: auto;
+    font-family: 'Space Mono', monospace;
+    font-size: 9px; color: var(--muted);
+    text-decoration: underline; cursor: pointer;
+    background: none; border: none;
+    transition: color 0.2s;
+  }
+  .selected-model-change:hover { color: var(--cyan); }
+
+  /* Form */
+  .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .form-group { display: flex; flex-direction: column; gap: 6px; }
+  .form-group.full { grid-column: 1 / -1; }
+
+  .form-label {
+    font-family: 'Space Mono', monospace;
+    font-size: 9px; letter-spacing: 2px; color: var(--muted);
+    text-transform: uppercase;
+  }
+  .form-input, .form-select, .form-textarea {
+    background: rgba(0,0,0,0.4);
+    border: 1px solid var(--border);
+    color: var(--white);
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 14px;
+    padding: 11px 14px;
+    outline: none;
+    transition: border-color 0.2s;
+    width: 100%;
+    appearance: none;
+    -webkit-appearance: none;
+  }
+  .form-input::placeholder, .form-textarea::placeholder { color: var(--muted); }
+  .form-input:focus, .form-select:focus, .form-textarea:focus {
+    border-color: var(--cyan);
+    background: rgba(0,212,255,0.04);
+  }
+  .form-input.error, .form-select.error, .form-textarea.error {
+    border-color: #ff4444;
+  }
+  .form-error-msg {
+    font-family: 'Space Mono', monospace;
+    font-size: 9px; color: #ff4444;
+    display: none;
+  }
+  .form-error-msg.show { display: block; }
+
+  .form-select {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' fill='none' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%235a7a99' stroke-width='1.5'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 14px center;
+    padding-right: 36px;
+    cursor: pointer;
+  }
+  .form-select option { background: var(--panel); }
+
+  .form-textarea { resize: vertical; min-height: 90px; }
+
+  .form-divider {
+    font-family: 'Space Mono', monospace;
+    font-size: 9px; color: var(--muted); letter-spacing: 3px;
+    text-transform: uppercase;
+    display: flex; align-items: center; gap: 12px;
+    margin: 20px 0;
+    grid-column: 1 / -1;
+  }
+  .form-divider::before, .form-divider::after {
+    content: ''; flex: 1; height: 1px; background: var(--border);
+  }
+
+  /* Duration selector */
+  .duration-options {
+    display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px;
+    grid-column: 1 / -1;
+  }
+  .duration-btn {
+    padding: 10px 6px;
+    border: 1px solid var(--border);
+    background: transparent; color: var(--muted);
+    font-family: 'Space Mono', monospace; font-size: 9px;
+    letter-spacing: 1px; text-transform: uppercase;
+    cursor: pointer; transition: all 0.2s; text-align: center;
+  }
+  .duration-btn:hover { border-color: var(--cyan); color: var(--cyan); }
+  .duration-btn.active { border-color: var(--cyan); color: var(--black); background: var(--cyan); }
+
+  /* Summary box */
+  .form-summary {
+    background: rgba(0,0,0,0.3);
+    border: 1px solid var(--border);
+    padding: 16px; margin-top: 20px;
+    grid-column: 1 / -1;
+  }
+  .summary-row {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-bottom: 8px;
+  }
+  .summary-row:last-child { margin-bottom: 0; padding-top: 10px; border-top: 1px solid var(--border); margin-top: 4px; }
+  .summary-label {
+    font-family: 'Space Mono', monospace; font-size: 9px;
+    color: var(--muted); letter-spacing: 2px; text-transform: uppercase;
+  }
+  .summary-val {
+    font-family: 'Rajdhani', sans-serif; font-size: 14px; font-weight: 600;
+    color: var(--white);
+  }
+  .summary-total { font-family: 'Bebas Neue', cursive; font-size: 24px; color: var(--cyan); }
+
+  .form-submit-row {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-top: 24px; flex-wrap: wrap; gap: 12px;
+  }
+  .form-note {
+    font-family: 'Space Mono', monospace; font-size: 9px;
+    color: var(--muted); line-height: 1.5;
+  }
+  .btn-submit {
+    font-family: 'Space Mono', monospace; font-size: 11px;
+    letter-spacing: 2px; padding: 14px 32px;
+    background: var(--cyan); color: var(--black);
+    border: none; cursor: pointer; text-transform: uppercase;
+    font-weight: 700; transition: all 0.2s;
+    display: flex; align-items: center; gap: 8px;
+    white-space: nowrap;
+  }
+  .btn-submit:disabled { opacity: 0.6; cursor: not-allowed; }
+  .btn-submit .spinner {
+    width: 14px; height: 14px;
+    border: 2px solid rgba(3,5,8,0.3);
+    border-top-color: var(--black);
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+    display: none;
+  }
+  .btn-submit.loading .spinner { display: block; }
+  .btn-submit.loading .btn-label { display: none; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* Success state */
+  .form-success {
+    display: none;
+    text-align: center; padding: 48px 32px;
+  }
+  .form-success.show { display: block; }
+  .success-icon { font-size: 48px; margin-bottom: 20px; }
+  .success-title {
+    font-family: 'Bebas Neue', cursive;
+    font-size: 36px; letter-spacing: 2px; color: var(--cyan); margin-bottom: 12px;
+  }
+  .success-msg {
+    font-size: 14px; color: var(--muted); line-height: 1.6; font-weight: 300;
+  }
+  .success-ref {
+    font-family: 'Space Mono', monospace;
+    font-size: 10px; color: var(--muted);
+    margin-top: 16px; letter-spacing: 2px;
+  }
+  .success-ref span { color: var(--cyan); }
+
+  /* ─ RESPONSIVE ─────────────────────────────── */
+
+  @media (max-width: 1024px) {
+    nav { padding: 16px 28px; }
+    .nav-links { display: none; }
+    .hamburger { display: flex; }
+    .nav-cta { display: none; }
+
+    .hero { grid-template-columns: 1fr; min-height: auto; }
+    .hero-left { padding: 110px 28px 40px; order: 1; }
+    .hero-right {
+      order: 2;
+      height: 340px;
+      border-top: 1px solid var(--border);
+    }
+    .robot-img { height: 300px; }
+    .robot-ring-1 { width: 200px; height: 200px; }
+    .robot-ring-2 { width: 280px; height: 280px; }
+    .robot-ring-3 { width: 340px; height: 340px; }
+    .robot-glow { width: 260px; height: 260px; }
+
+    .hero-stats { margin-top: 36px; padding-top: 28px; gap: 24px; }
+
+    .section { padding: 60px 28px; }
+
+    .models-grid { grid-template-columns: 1fr; gap: 16px; }
+
+    .usecases-grid { grid-template-columns: 1fr 1fr; }
+    .usecase-card { border-bottom: 1px solid var(--border); }
+    .usecase-card:nth-child(2) { border-right: none; }
+    .usecase-card:nth-child(3), .usecase-card:nth-child(4) { border-bottom: none; }
+
+    .process-steps {
+      grid-template-columns: 1fr 1fr; gap: 40px;
+    }
+    .process-steps::before { display: none; }
+
+    .pricing-banner { grid-template-columns: 1fr; gap: 32px; padding: 48px 28px; }
+    .banner-actions { align-items: flex-start; }
+    .banner-price { text-align: left; }
+
+    footer { padding: 48px 28px; }
+    .footer-grid { grid-template-columns: 1fr 1fr; gap: 36px; }
+  }
+
+  @media (max-width: 640px) {
+    nav { padding: 14px 20px; }
+    .nav-logo { font-size: 22px; letter-spacing: 4px; }
+
+    .hero-title { font-size: clamp(54px, 14vw, 72px); }
+    .hero-desc { font-size: 14px; }
+    .hero-actions { flex-direction: column; align-items: flex-start; gap: 10px; }
+    .btn-primary, .btn-ghost { width: 100%; text-align: center; }
+    .hero-stats { gap: 16px; }
+    .stat-val { font-size: 28px; }
+
+    .hero-right { height: 280px; }
+    .robot-img { height: 240px; }
+
+    .section { padding: 48px 20px; }
+
+    .models-grid { gap: 12px; }
+    .model-visual { height: 180px; }
+    .model-icon { font-size: 56px; }
+
+    .usecases-grid { grid-template-columns: 1fr; }
+    .usecase-card { border-right: none; }
+    .usecase-card:nth-child(3) { border-bottom: 1px solid var(--border); }
+    .usecase-card:nth-child(4) { border-bottom: none; }
+
+    .process-steps { grid-template-columns: 1fr; gap: 32px; }
+
+    footer { padding: 40px 20px; }
+    .footer-grid { grid-template-columns: 1fr; gap: 28px; }
+
+    .form-grid { grid-template-columns: 1fr; }
+    .duration-options { grid-template-columns: repeat(2, 1fr); }
+    .modal-header { padding: 20px 20px 16px; }
+    .modal-body { padding: 20px; }
+    .form-submit-row { flex-direction: column; align-items: stretch; }
+    .btn-submit { justify-content: center; }
+
+    .pricing-banner { padding: 36px 20px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="cursor" id="cursor"></div>
+<div class="cursor-ring" id="cursorRing"></div>
+
+<!-- Mobile Menu Overlay -->
+<div class="mobile-menu" id="mobileMenu">
+  <a href="#" onclick="closeMobileMenu()">Models</a>
+  <a href="#" onclick="closeMobileMenu()">Use Cases</a>
+  <a href="#" onclick="closeMobileMenu()">Pricing</a>
+  <a href="#" onclick="closeMobileMenu()">About</a>
+  <button class="mobile-cta" onclick="openModal('general'); closeMobileMenu()">Deploy Now</button>
+</div>
+
+<!-- NAV -->
+<nav>
+  <div class="nav-logo">RENTO<span>BOT</span></div>
+  <ul class="nav-links">
+    <li><a href="#">Models</a></li>
+    <li><a href="#">Use Cases</a></li>
+    <li><a href="#">Pricing</a></li>
+    <li><a href="#">About</a></li>
+  </ul>
+  <button class="nav-cta" onclick="openModal('general')">Deploy Now</button>
+  <button class="hamburger" id="hamburger" onclick="toggleMobileMenu()" aria-label="Menu">
+    <span></span><span></span><span></span>
+  </button>
+</nav>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="hero-left">
+    <div class="hero-tag">Next-Gen Humanoid Robotics</div>
+    <h1 class="hero-title">
+      <span>RENT</span><br>
+      <span class="line-accent">TOMORROW'S</span><br>
+      <span>WORKFORCE</span><br>
+      <span class="line-dim">TODAY</span>
+    </h1>
+    <p class="hero-desc">
+      Deploy fully autonomous humanoid robots for industrial, commercial, and enterprise operations. Flexible rental plans from 24 hours to 12 months.
+    </p>
+    <div class="hero-actions">
+      <button class="btn-primary" onclick="openModal('general')">Browse Models</button>
+      <button class="btn-ghost" onclick="openModal('demo')">Watch Demo</button>
+    </div>
+    <div class="hero-stats">
+      <div><span class="stat-val">340+</span><span class="stat-label">Active Deployments</span></div>
+      <div><span class="stat-val">99.7%</span><span class="stat-label">Uptime SLA</span></div>
+      <div><span class="stat-val">24H</span><span class="stat-label">Deploy Time</span></div>
+    </div>
+  </div>
+  <div class="hero-right">
+    <div class="robot-stage">
+      <div class="robot-glow"></div>
+      <div class="robot-ring robot-ring-1"></div>
+      <div class="robot-ring robot-ring-2"></div>
+      <div class="robot-ring robot-ring-3"></div>
+      <div class="scan-line"></div>
+      <img class="robot-img" src="images/robot.png" alt="Rentobot humanoid robot"
+           onerror="this.style.display='none';this.nextElementSibling.style.display='block'">
+      <div style="display:none;font-size:100px;position:relative;z-index:2;animation:robotFloat 5s ease-in-out infinite">🤖</div>
+      <div class="hud-corner hud-tl"></div>
+      <div class="hud-corner hud-tr"></div>
+      <div class="hud-corner hud-bl"></div>
+      <div class="hud-corner hud-br"></div>
+    </div>
+  </div>
+</section>
+
+<!-- TICKER -->
+<div class="ticker">
+  <div class="ticker-inner">
+    <span>RENTOBOT HX-1 SERIES NOW AVAILABLE</span><span class="ticker-sep">◆</span>
+    <span>INDUSTRIAL DEPLOYMENT FROM ₹4,200/DAY</span><span class="ticker-sep">◆</span>
+    <span>24-HOUR RAPID ONBOARDING</span><span class="ticker-sep">◆</span>
+    <span>ENTERPRISE FLEET PLANS AVAILABLE</span><span class="ticker-sep">◆</span>
+    <span>RENTOBOT HX-1 SERIES NOW AVAILABLE</span><span class="ticker-sep">◆</span>
+    <span>INDUSTRIAL DEPLOYMENT FROM ₹4,200/DAY</span><span class="ticker-sep">◆</span>
+    <span>24-HOUR RAPID ONBOARDING</span><span class="ticker-sep">◆</span>
+    <span>ENTERPRISE FLEET PLANS AVAILABLE</span><span class="ticker-sep">◆</span>
+  </div>
+</div>
+
+<!-- MODELS -->
+<section class="section" id="models">
+  <div class="section-header reveal">
+    <div>
+      <div class="section-eyebrow">Available Units</div>
+      <h2 class="section-title">Rental Models</h2>
+    </div>
+    <a href="#" class="view-all">View All Units →</a>
+  </div>
+  <div class="models-grid">
+    <div class="model-card reveal" onclick="openModal('hx1')">
+      <div class="model-overlay"></div>
+      <div class="model-badge">Humanoid Robot</div>
+      <div class="model-visual"><span class="model-icon">🤖</span></div>
+      <div class="model-info">
+        <div class="model-series">HX Series — G1</div>
+        <div class="model-name">HX G1</div>
+        <p class="model-desc">Flagship autonomous unit with full AI decision-making, suited for executive environments and research.</p>
+        <div class="model-specs">
+          <div class="spec-item"><div class="spec-label">Payload</div><div class="spec-val">25 kg</div></div>
+          <div class="spec-item"><div class="spec-label">Runtime</div><div class="spec-val">18 hrs</div></div>
+          <div class="spec-item"><div class="spec-label">DOF</div><div class="spec-val">22 Joints</div></div>
+          <div class="spec-item"><div class="spec-label">Speed</div><div class="spec-val">4.2 km/h</div></div>
+        </div>
+        <div class="model-pricing">
+          <div><span class="price-from">Starting from</span><span class="price-val">₹125K</span><span class="price-period"> / day</span></div>
+          <button class="btn-rent" onclick="openModal('hx1');event.stopPropagation()">Rent Now</button>
+        </div>
+      </div>
+    </div>
+    <div class="model-card reveal" onclick="openModal('k9x')">
+      <div class="model-overlay"></div>
+      <div class="model-badge pro">Dog Robot</div>
+      <div class="model-visual" style="background:linear-gradient(135deg,#12080d,#1a0a15)"><span class="model-icon">🦾</span></div>
+      <div class="model-info">
+        <div class="model-series" style="color:#ff6b2b">NX Series — Gen 5</div>
+        <div class="model-name">K9-X ROBO DOG</div>
+        <p class="model-desc">Advanced dexterity model for precision assembly, healthcare assistance, and complex operations.</p>
+        <div class="model-specs">
+          <div class="spec-item"><div class="spec-label">Payload</div><div class="spec-val">10 kg</div></div>
+          <div class="spec-item"><div class="spec-label">Runtime</div><div class="spec-val">8 hrs</div></div>
+          <div class="spec-item"><div class="spec-label">DOF</div><div class="spec-val">38 Joints</div></div>
+          <div class="spec-item"><div class="spec-label">Speed</div><div class="spec-val">6.0 km/h</div></div>
+        </div>
+        <div class="model-pricing">
+          <div><span class="price-from">Starting from</span><span class="price-val" style="color:#ff6b2b">₹20K</span><span class="price-period"> / day</span></div>
+          <button class="btn-rent" style="border-color:#ff6b2b;color:#ff6b2b" onclick="openModal('k9x');event.stopPropagation()">Rent Now</button>
+        </div>
+      </div>
+    </div>
+    <div class="model-card reveal" onclick="openModal('hx7')">
+      <div class="model-overlay"></div>
+      <div class="model-badge elite">Fleet Robots</div>
+      <div class="model-visual" style="background:linear-gradient(135deg,#0d0812,#150d1e)"><span class="model-icon">⚡</span></div>
+      <div class="model-info">
+        <div class="model-series" style="color:#9b59b6">NX Series — Gen 7</div>
+        <div class="model-name">HX-7 ELITE</div>
+        <p class="model-desc">General-purpose unit ideal for logistics, sorting, and repetitive task environments.</p>
+        <div class="model-specs">
+          <div class="spec-item"><div class="spec-label">Payload</div><div class="spec-val">60 kg</div></div>
+          <div class="spec-item"><div class="spec-label">Runtime</div><div class="spec-val">32 hrs</div></div>
+          <div class="spec-item"><div class="spec-label">DOF</div><div class="spec-val">54 Joints</div></div>
+          <div class="spec-item"><div class="spec-label">Speed</div><div class="spec-val">8.1 km/h</div></div>
+        </div>
+        <div class="model-pricing">
+          <div><span class="price-from">Starting from</span><span class="price-val" style="color:#9b59b6">₹18,500</span><span class="price-period"> / day</span></div>
+          <button class="btn-rent" style="border-color:#9b59b6;color:#9b59b6" onclick="openModal('hx7');event.stopPropagation()">Rent Now</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- USE CASES -->
+<section class="usecases-bg section" style="padding-left:0;padding-right:0;" id="usecases">
+  <div style="padding:0 60px 40px" class="reveal">
+    <div class="section-eyebrow">Applications</div>
+    <h2 class="section-title">Where Rentobots Operates</h2>
+  </div>
+  <div class="usecases-grid reveal">
+    <div class="usecase-card">
+      <div class="usecase-num">01</div>
+      <span class="usecase-icon">🏭</span>
+      <div class="usecase-title">Manufacturing</div>
+      <p class="usecase-desc">24/7 assembly line automation, precision welding, and quality inspection at scale.</p>
+    </div>
+    <div class="usecase-card">
+      <div class="usecase-num">02</div>
+      <span class="usecase-icon">🏥</span>
+      <div class="usecase-title">Healthcare</div>
+      <p class="usecase-desc">Patient assistance, medication delivery, and sanitation support in clinical environments.</p>
+    </div>
+    <div class="usecase-card">
+      <div class="usecase-num">03</div>
+      <span class="usecase-icon">📦</span>
+      <div class="usecase-title">Logistics</div>
+      <p class="usecase-desc">Warehouse picking, sorting, and last-mile fulfillment at unprecedented throughput.</p>
+    </div>
+    <div class="usecase-card">
+      <div class="usecase-num">04</div>
+      <span class="usecase-icon">🔬</span>
+      <div class="usecase-title">Research</div>
+      <p class="usecase-desc">R&D environments, hazardous material handling, and data collection in remote sites.</p>
+    </div>
+  </div>
+</section>
+
+<!-- PROCESS -->
+<section class="section">
+  <div style="text-align:center;margin-bottom:52px" class="reveal">
+    <div class="section-eyebrow" style="justify-content:center">How It Works</div>
+    <h2 class="section-title">Deploy in 4 Steps</h2>
+  </div>
+  <div class="process-steps reveal">
+    <div class="process-step">
+      <div class="step-num">01</div>
+      <div class="step-title">Select Model</div>
+      <p class="step-desc">Choose from our NX lineup based on your operational requirements and load specs.</p>
+    </div>
+    <div class="process-step">
+      <div class="step-num">02</div>
+      <div class="step-title">Configure & Sign</div>
+      <p class="step-desc">Customize runtime parameters, select rental duration, and sign our enterprise SLA.</p>
+    </div>
+    <div class="process-step">
+      <div class="step-num">03</div>
+      <div class="step-title">Onsite Delivery</div>
+      <p class="step-desc">Our technicians deliver and calibrate the unit at your facility within 24 hours.</p>
+    </div>
+    <div class="process-step">
+      <div class="step-num">04</div>
+      <div class="step-title">Monitor & Scale</div>
+      <p class="step-desc">Track performance via our cloud dashboard. Scale your fleet up or down anytime.</p>
+    </div>
+  </div>
+</section>
+
+<!-- CTA BANNER -->
+<section class="section" style="padding-top:0" id="pricing">
+  <div class="pricing-banner reveal">
+    <div>
+      <div class="banner-eyebrow">Enterprise Fleet Pricing</div>
+      <div class="banner-title">READY TO SCALE<br>YOUR OPERATION?</div>
+      <p class="banner-desc">Deploy 5+ units and unlock fleet discounts, dedicated support, and custom AI training for your workflow.</p>
+    </div>
+    <div class="banner-actions">
+      <div class="banner-price">Fleet plans from<strong>₹3,200<span style="font-size:20px">/unit/day</span></strong></div>
+      <button class="btn-primary" onclick="openModal('fleet')">Request Fleet Quote</button>
+      <button class="btn-ghost" onclick="openModal('demo')">Book a Demo</button>
+    </div>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <div class="footer-grid">
+    <div>
+      <div class="footer-logo">RENTO<span>BOT</span></div>
+      <p class="footer-tagline">Humanoid robotics rental for the modern enterprise. Flexible, scalable, fully autonomous.</p>
+    </div>
+    <div>
+      <div class="footer-col-title">Models</div>
+      <ul class="footer-links">
+        <li><a href="#" onclick="openModal('hx1')">HX G1 Standard</a></li>
+        <li><a href="#" onclick="openModal('k9x')">K9-X Robo Dog</a></li>
+        <li><a href="#" onclick="openModal('hx7')">HX-7 Elite</a></li>
+        <li><a href="#" onclick="openModal('fleet')">Custom Fleet</a></li>
+      </ul>
+    </div>
+    <div>
+      <div class="footer-col-title">Company</div>
+      <ul class="footer-links">
+        <li><a href="#">About Nexus</a></li>
+        <li><a href="#">Technology</a></li>
+        <li><a href="#">Safety Protocols</a></li>
+        <li><a href="#">Careers</a></li>
+      </ul>
+    </div>
+    <div>
+      <div class="footer-col-title">Support</div>
+      <ul class="footer-links">
+        <li><a href="#">Documentation</a></li>
+        <li><a href="#">SLA & Uptime</a></li>
+        <li><a href="#" onclick="openModal('general')">Contact Us</a></li>
+        <li><a href="#">Status Page</a></li>
+      </ul>
+    </div>
+  </div>
+  <div class="footer-bottom">
+    <div class="footer-copy">© 2026 RENTOBOTS ROBOTICS PVT LTD — ALL RIGHTS RESERVED</div>
+    <div class="status-indicator"><div class="status-dot"></div>ALL SYSTEMS OPERATIONAL</div>
+  </div>
+</footer>
+
+<!-- ─────────── MODAL ─────────── -->
+<div class="modal-overlay" id="modalOverlay" onclick="handleOverlayClick(event)">
+  <div class="modal" id="modal">
+
+    <!-- Header -->
+    <div class="modal-header">
+      <div>
+        <div class="modal-eyebrow" id="modalEyebrow">Rental Inquiry</div>
+        <div class="modal-title" id="modalTitle">REQUEST A UNIT</div>
+      </div>
+      <button class="modal-close" onclick="closeModal()">✕</button>
+    </div>
+
+    <!-- Form body -->
+    <div class="modal-body" id="modalFormBody">
+
+      <!-- Selected model display -->
+      <div class="selected-model" id="selectedModelBox">
+        <div class="selected-model-icon" id="selIcon">🤖</div>
+        <div>
+          <div class="selected-model-name" id="selName">HX G1</div>
+          <div class="selected-model-price" id="selPrice">from ₹125,000 / day</div>
+        </div>
+        <button class="selected-model-change" onclick="changeModel()">Change</button>
+      </div>
+
+      <!-- Model selector (hidden by default) -->
+      <div id="modelSelector" style="display:none;margin-bottom:20px;">
+        <div class="form-label" style="margin-bottom:10px">Choose a model</div>
+        <div style="display:flex;flex-direction:column;gap:8px">
+          <div class="duration-btn" style="text-align:left;padding:12px 16px;font-size:10px" onclick="selectModelFromPicker('hx1')">🤖 &nbsp; HX G1 — ₹125,000/day</div>
+          <div class="duration-btn" style="text-align:left;padding:12px 16px;font-size:10px" onclick="selectModelFromPicker('k9x')">🦾 &nbsp; K9-X Robo Dog — ₹20,000/day</div>
+          <div class="duration-btn" style="text-align:left;padding:12px 16px;font-size:10px" onclick="selectModelFromPicker('hx7')">⚡ &nbsp; HX-7 Elite — ₹18,500/day</div>
+        </div>
+      </div>
+
+      <form id="rentalForm" novalidate onsubmit="submitForm(event)">
+        <div class="form-grid">
+          <!-- Personal info -->
+          <div class="form-group">
+            <label class="form-label">First Name *</label>
+            <input type="text" class="form-input" id="firstName" placeholder="Arjun" required>
+            <span class="form-error-msg" id="firstNameErr">Required field</span>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Last Name *</label>
+            <input type="text" class="form-input" id="lastName" placeholder="Menon" required>
+            <span class="form-error-msg" id="lastNameErr">Required field</span>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Email *</label>
+            <input type="email" class="form-input" id="email" placeholder="you@company.com" required>
+            <span class="form-error-msg" id="emailErr">Valid email required</span>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Phone</label>
+            <input type="tel" class="form-input" id="phone" placeholder="+91 98765 43210">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Company / Organisation *</label>
+            <input type="text" class="form-input" id="company" placeholder="Nexus Industries Ltd." required>
+            <span class="form-error-msg" id="companyErr">Required field</span>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Industry</label>
+            <select class="form-select" id="industry">
+              <option value="">Select sector…</option>
+              <option>Manufacturing</option>
+              <option>Healthcare</option>
+              <option>Logistics & Warehousing</option>
+              <option>Hospitality & Events</option>
+              <option>Research & Development</option>
+              <option>Construction</option>
+              <option>Other</option>
+            </select>
+          </div>
+
+          <div class="form-divider">Deployment Details</div>
+
+          <!-- Duration -->
+          <div class="form-group full">
+            <label class="form-label">Rental Duration *</label>
+            <div class="duration-options" id="durationOptions">
+              <button type="button" class="duration-btn active" data-days="1" onclick="selectDuration(this,1)">1 Day</button>
+              <button type="button" class="duration-btn" data-days="7" onclick="selectDuration(this,7)">1 Week</button>
+              <button type="button" class="duration-btn" data-days="30" onclick="selectDuration(this,30)">1 Month</button>
+              <button type="button" class="duration-btn" data-days="365" onclick="selectDuration(this,365)">1 Year</button>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">No. of Units *</label>
+            <select class="form-select" id="units" onchange="updateSummary()" required>
+              <option value="1">1 Unit</option>
+              <option value="2">2 Units</option>
+              <option value="3">3 Units</option>
+              <option value="5">5 Units (Fleet)</option>
+              <option value="10">10 Units (Fleet+)</option>
+              <option value="0">Custom fleet</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Deployment City *</label>
+            <input type="text" class="form-input" id="city" placeholder="Kochi / Trivandrum…" required>
+            <span class="form-error-msg" id="cityErr">Required field</span>
+          </div>
+
+          <div class="form-group full">
+            <label class="form-label">Describe Your Use Case</label>
+            <textarea class="form-textarea" id="usecase" placeholder="Tell us about your operational environment, tasks required, any special requirements…"></textarea>
+          </div>
+
+          <!-- Price summary -->
+          <div class="form-summary" id="priceSummary">
+            <div class="summary-row">
+              <span class="summary-label">Model</span>
+              <span class="summary-val" id="sumModel">HX G1</span>
+            </div>
+            <div class="summary-row">
+              <span class="summary-label">Duration</span>
+              <span class="summary-val" id="sumDuration">1 Day</span>
+            </div>
+            <div class="summary-row">
+              <span class="summary-label">Units</span>
+              <span class="summary-val" id="sumUnits">1</span>
+            </div>
+            <div class="summary-row">
+              <span class="summary-label">Est. Total</span>
+              <span class="summary-total" id="sumTotal">₹1,25,000</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="form-submit-row">
+          <div class="form-note">Our team will confirm availability<br>within 4 business hours.</div>
+          <button type="submit" class="btn-submit" id="submitBtn">
+            <span class="btn-label">Submit Request</span>
+            <div class="spinner"></div>
+          </button>
+        </div>
+      </form>
+    </div>
+
+    <!-- Success screen -->
+    <div class="form-success" id="formSuccess">
+      <div class="success-icon">✅</div>
+      <div class="success-title">REQUEST SUBMITTED</div>
+      <p class="success-msg">Thank you! Our deployment team will reach out within 4 business hours to confirm availability and finalise your SLA.</p>
+      <div class="success-ref">Reference: <span id="refCode">RBOT-000000</span></div>
+      <button class="btn-primary" style="margin:28px auto 0;display:block" onclick="closeModal()">Close</button>
+    </div>
+
+  </div>
+</div>
+
+<script>
+  /* ─── Custom cursor (desktop only) ─── */
+  const cursor = document.getElementById('cursor');
+  const ring   = document.getElementById('cursorRing');
+  if (cursor && ring) {
+    let mx=0,my=0,rx=0,ry=0;
+    document.addEventListener('mousemove', e => {
+      mx=e.clientX; my=e.clientY;
+      cursor.style.left=mx+'px'; cursor.style.top=my+'px';
+    });
+    (function animateRing(){
+      rx+=(mx-rx)*0.12; ry+=(my-ry)*0.12;
+      ring.style.left=rx+'px'; ring.style.top=ry+'px';
+      requestAnimationFrame(animateRing);
+    })();
+    document.querySelectorAll('button,a,.model-card,.usecase-card').forEach(el=>{
+      el.addEventListener('mouseenter',()=>{
+        cursor.style.transform='translate(-50%,-50%) scale(1.8)';
+        ring.style.transform='translate(-50%,-50%) scale(1.4)';
+        ring.style.borderColor='rgba(0,212,255,0.8)';
+      });
+      el.addEventListener('mouseleave',()=>{
+        cursor.style.transform='translate(-50%,-50%) scale(1)';
+        ring.style.transform='translate(-50%,-50%) scale(1)';
+        ring.style.borderColor='rgba(0,212,255,0.5)';
+      });
+    });
+  }
+
+  /* ─── Scroll reveal ─── */
+  const obs = new IntersectionObserver((entries)=>{
+    entries.forEach((entry,i)=>{
+      if(entry.isIntersecting) setTimeout(()=>entry.target.classList.add('visible'),i*80);
+    });
+  },{threshold:0.08});
+  document.querySelectorAll('.reveal').forEach(el=>obs.observe(el));
+
+  /* ─── Mobile menu ─── */
+  function toggleMobileMenu(){
+    const m=document.getElementById('mobileMenu');
+    const h=document.getElementById('hamburger');
+    m.classList.toggle('open');
+    h.classList.toggle('open');
+    document.body.style.overflow = m.classList.contains('open') ? 'hidden' : '';
+  }
+  function closeMobileMenu(){
+    document.getElementById('mobileMenu').classList.remove('open');
+    document.getElementById('hamburger').classList.remove('open');
+    document.body.style.overflow='';
+  }
+
+  /* ─── Modal data ─── */
+  const models = {
+    hx1:  { icon:'🤖', name:'HX G1',           price:125000, priceStr:'₹1,25,000', label:'from ₹125,000 / day' },
+    k9x:  { icon:'🦾', name:'K9-X Robo Dog',    price:20000,  priceStr:'₹20,000',   label:'from ₹20,000 / day' },
+    hx7:  { icon:'⚡', name:'HX-7 Elite',        price:18500,  priceStr:'₹18,500',   label:'from ₹18,500 / day' },
+    general:{ icon:'🤖',name:'HX G1',            price:125000, priceStr:'₹1,25,000', label:'from ₹125,000 / day' },
+    fleet:{ icon:'⚡', name:'HX-7 Elite (Fleet)',price:3200,   priceStr:'₹3,200',    label:'from ₹3,200 / unit / day' },
+    demo: { icon:'🤖', name:'Demo Request',      price:0,      priceStr:'Free',       label:'No charge' },
+  };
+
+  let currentModel='hx1';
+  let currentDays=1;
+
+  function openModal(modelKey){
+    currentModel = modelKey || 'general';
+    if(currentModel==='general') currentModel='hx1';
+    setModalContent();
+    document.getElementById('modalOverlay').classList.add('open');
+    document.getElementById('formSuccess').classList.remove('show');
+    document.getElementById('modalFormBody').style.display='block';
+    document.body.style.overflow='hidden';
+    updateSummary();
+  }
+  function closeModal(){
+    document.getElementById('modalOverlay').classList.remove('open');
+    document.body.style.overflow='';
+  }
+  function handleOverlayClick(e){
+    if(e.target===document.getElementById('modalOverlay')) closeModal();
+  }
+
+  function setModalContent(){
+    const m = models[currentModel] || models.hx1;
+    if(currentModel==='demo'){
+      document.getElementById('modalEyebrow').textContent='Schedule a Demo';
+      document.getElementById('modalTitle').textContent='BOOK A DEMO';
+    } else if(currentModel==='fleet'){
+      document.getElementById('modalEyebrow').textContent='Fleet Inquiry';
+      document.getElementById('modalTitle').textContent='FLEET QUOTE';
+    } else {
+      document.getElementById('modalEyebrow').textContent='Rental Inquiry';
+      document.getElementById('modalTitle').textContent='REQUEST A UNIT';
+    }
+    document.getElementById('selIcon').textContent = m.icon;
+    document.getElementById('selName').textContent = m.name;
+    document.getElementById('selPrice').textContent = m.label;
+    document.getElementById('sumModel').textContent = m.name;
+  }
+
+  function changeModel(){
+    const sel = document.getElementById('modelSelector');
+    sel.style.display = sel.style.display==='none' ? 'block' : 'none';
+  }
+  function selectModelFromPicker(key){
+    currentModel=key;
+    document.getElementById('modelSelector').style.display='none';
+    setModalContent();
+    updateSummary();
+  }
+
+  /* Duration selector */
+  function selectDuration(btn, days){
+    document.querySelectorAll('.duration-btn').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    currentDays=days;
+    document.getElementById('sumDuration').textContent = btn.textContent;
+    updateSummary();
+  }
+
+  function updateSummary(){
+    const m = models[currentModel] || models.hx1;
+    const units = parseInt(document.getElementById('units').value) || 1;
+    let total = m.price * currentDays * units;
+    // Fleet discount (5+)
+    if(units>=5) total = Math.round(total*0.85);
+    document.getElementById('sumUnits').textContent = units === 0 ? 'Custom' : units;
+    document.getElementById('sumTotal').textContent = total===0 ? 'TBD' : '₹' + total.toLocaleString('en-IN');
+  }
+
+  /* ─── Form validation & submit ─── */
+  function validate(){
+    let ok=true;
+    const fields = [
+      {id:'firstName', errId:'firstNameErr', check: v=>v.trim().length>0},
+      {id:'lastName',  errId:'lastNameErr',  check: v=>v.trim().length>0},
+      {id:'email',     errId:'emailErr',     check: v=>/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v)},
+      {id:'company',   errId:'companyErr',   check: v=>v.trim().length>0},
+      {id:'city',      errId:'cityErr',      check: v=>v.trim().length>0},
+    ];
+    fields.forEach(f=>{
+      const el=document.getElementById(f.id);
+      const err=document.getElementById(f.errId);
+      if(!f.check(el.value)){
+        el.classList.add('error');
+        err.classList.add('show');
+        ok=false;
+      } else {
+        el.classList.remove('error');
+        err.classList.remove('show');
+      }
+    });
+    return ok;
+  }
+
+  function submitForm(e){
+    e.preventDefault();
+    if(!validate()) return;
+
+    const btn=document.getElementById('submitBtn');
+    btn.classList.add('loading');
+    btn.disabled=true;
+
+    // Simulate API call
+    setTimeout(()=>{
+      btn.classList.remove('loading');
+      btn.disabled=false;
+      showSuccess();
+    },1800);
+  }
+
+  function showSuccess(){
+    document.getElementById('modalFormBody').style.display='none';
+    const s=document.getElementById('formSuccess');
+    s.classList.add('show');
+    const ref='RBOT-'+Math.random().toString(36).substr(2,6).toUpperCase();
+    document.getElementById('refCode').textContent=ref;
+    // Reset form
+    document.getElementById('rentalForm').reset();
+    document.querySelectorAll('.duration-btn').forEach((b,i)=>{
+      b.classList.toggle('active',i===0);
+    });
+    currentDays=1;
+  }
+
+  // Clear error on input
+  document.addEventListener('DOMContentLoaded',()=>{
+    ['firstName','lastName','email','company','city'].forEach(id=>{
+      const el=document.getElementById(id);
+      if(el) el.addEventListener('input',()=>{
+        el.classList.remove('error');
+        const err=document.getElementById(id+'Err');
+        if(err) err.classList.remove('show');
+      });
+    });
+  });
+
+  // Close modal on Escape
+  document.addEventListener('keydown',e=>{
+    if(e.key==='Escape') closeModal();
+  });
+</script>
+</body>
+</html>
